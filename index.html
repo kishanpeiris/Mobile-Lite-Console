@@ -136,7 +136,9 @@
   #annotation-layer{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:896;}
   .annotation-bubble{position:absolute;width:190px;background:#FFFDF3;border:1.5px solid #F0D98C;border-radius:12px;box-shadow:var(--shadow-md);padding:9px 10px;pointer-events:auto;cursor:grab;z-index:897;}
   .annotation-bubble:active{cursor:grabbing;}
-  .annotation-bubble .ann-text{font-size:12px;line-height:1.4;color:#4A3F1A;outline:none;white-space:pre-wrap;word-break:break-word;min-height:18px;}
+  .annotation-bubble .ann-text{font-size:12px;line-height:1.4;color:#4A3F1A;outline:none;white-space:pre-wrap;word-break:break-word;min-height:18px;cursor:text;}
+  .annotation-bubble .ann-drag-handle{cursor:grab;color:#D8C27A;font-size:11px;text-align:center;line-height:1;margin:-3px 0 4px;letter-spacing:2px;user-select:none;}
+  .annotation-bubble .ann-drag-handle:active{cursor:grabbing;}
   .annotation-bubble .ann-controls{display:flex;gap:4px;margin-top:6px;justify-content:flex-end;}
   .annotation-bubble .ann-btn{width:20px;height:20px;border:none;background:#F5E9BE;border-radius:6px;font-size:10px;color:#7A6A2E;cursor:pointer;display:flex;align-items:center;justify-content:center;}
   .annotation-bubble .ann-btn:hover{background:#EEDB98;}
@@ -180,6 +182,10 @@
   .prop-field input[type=checkbox]{width:15px;height:15px;}
   .swatches{display:flex;gap:5px;margin-top:5px;flex-wrap:wrap;}
   .swatch{width:18px;height:18px;border-radius:5px;border:1px solid rgba(0,0,0,0.12);cursor:pointer;flex:none;}
+  .swatch-wrap{position:relative;display:inline-block;width:18px;height:18px;flex:none;}
+  .swatch-wrap .swatch{width:18px;height:18px;}
+  .swatch-remove{display:none;position:absolute;top:-6px;right:-6px;width:13px;height:13px;border-radius:50%;background:#C0392B;color:#fff;font-size:9px;line-height:11px;text-align:center;padding:0;margin:0;border:1.5px solid #fff;cursor:pointer;z-index:2;}
+  .swatch-wrap:hover .swatch-remove{display:block;}
   .swatch-add{display:flex;align-items:center;justify-content:center;background:var(--gray-100);border:1.5px dashed var(--gray-400);color:var(--gray-400);font-size:12px;font-weight:800;line-height:1;}
   .swatch-add:hover{border-color:var(--green-500);color:var(--green-600);background:var(--green-50);}
   .layer-row{display:flex;gap:6px;}
@@ -321,7 +327,9 @@
   <div id="nav-panel">
     <div class="nav-brand"><div class="brand-mark">M</div><div><b>Mobile Lite</b><span>Admin Console</span></div></div>
     <div class="nav-item" data-view="dashboard">Dashboard</div>
+    <div class="nav-item" data-view="projectstatus">Project Status</div>
     <div class="nav-item" data-view="integration">Integration</div>
+    <div class="nav-item" data-view="testing">Testing</div>
     <div class="nav-item active" data-view="design">UI Design Studio</div>
     <div class="nav-item" data-view="users">Users</div>
     <div class="nav-item" data-view="activity">Activity</div>
@@ -345,6 +353,13 @@
       <h3>Getting started</h3>
       <div style="font-size:12.5px;color:var(--gray-600);line-height:1.6;">Use <b>UI Design Studio</b> in the menu to design the trade app's screens — this is the design reference used to update the native Android build (see Part C of the master spec). <b>Users</b>, <b>Activity</b> and <b>Audit Logs</b> reflect FileMaker/Salesforce integration data once connected.</div>
     </div>
+  </div>
+
+  <div id="view-projectstatus" class="console-view">
+    <h1>Project Status</h1>
+    <div class="sub">Step-by-step checklist from here to the Android app going live in production. Tick items off as they're done — this is shared reference for the whole team, not a to-do list that disappears.</div>
+    <div id="project-status-progress" class="console-card"></div>
+    <div id="project-status-phases"></div>
   </div>
 
   <div id="view-integration" class="console-view">
@@ -382,9 +397,44 @@
     </div>
 
     <div class="console-card">
+      <h3>Future integrations <span style="font-weight:600;font-size:11px;color:var(--gray-400);">— not connected yet, kept ready</span></h3>
+      <div style="font-size:12.5px;color:var(--gray-600);margin-bottom:12px;">Fields are saved locally so whoever wires these up later doesn't start from scratch. Nothing here is called by the app until you say so.</div>
+      <div id="integration-ideagen-fields"></div>
+      <div style="display:flex; gap:10px; align-items:center; margin:6px 0 16px;">
+        <button class="btn small" id="ideagen-test-btn">Test Connection</button>
+        <span id="ideagen-status" class="menu-status" style="padding:0;">Not connected</span>
+      </div>
+      <div style="height:1px;background:var(--border);margin:4px 0 16px;"></div>
+      <div id="integration-talentlms-fields"></div>
+      <div style="display:flex; gap:10px; align-items:center; margin-top:6px;">
+        <button class="btn small" id="talentlms-test-btn">Test Connection</button>
+        <span id="talentlms-status" class="menu-status" style="padding:0;">Not connected</span>
+      </div>
+    </div>
+
+    <div class="console-card">
       <h3>Handoff</h3>
       <button class="btn small primary" id="btn-export-integration">Export Integration Spec (JSON)</button>
       <div class="menu-status" style="padding:8px 0 0;">Client secrets are never included in the export — configure those in the Android app's secure storage (or better, let the app use Anypoint-issued per-device client credentials) and in Anypoint Runtime Manager as secure properties, not hardcoded.</div>
+    </div>
+  </div>
+
+  <div id="view-testing" class="console-view">
+    <h1>Testing</h1>
+    <div class="sub">Fires real requests at every endpoint below using the Base URL / Client ID / Client Secret configured on the Integration page — across MuleSoft and any future-connected platforms. Useful once something is actually deployed; until then you'll just see connection errors, which is expected.</div>
+    <div class="console-card">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+        <button class="btn small primary" id="testing-run-all">▶ Run All Tests</button>
+        <span id="testing-summary" class="menu-status" style="padding:0;">Not run yet</span>
+      </div>
+    </div>
+    <div class="console-card">
+      <h3>MuleSoft API endpoints</h3>
+      <div id="testing-mule-table"></div>
+    </div>
+    <div class="console-card">
+      <h3>Other platforms</h3>
+      <div id="testing-other-table"></div>
     </div>
   </div>
 
@@ -495,7 +545,8 @@
   </div>
 
   <div id="global-icon-picker"></div>
-  <input type="color" id="global-color-add-input" style="position:fixed;top:-100px;left:-100px;width:1px;height:1px;opacity:0;pointer-events:none;">
+  <input type="color" id="global-color-add-input" style="position:fixed;top:0px;left:0px;width:1px;height:1px;opacity:0;pointer-events:none;">
+  <input type="file" id="global-image-file-input" accept="image/*" style="display:none;">
   </div>
   </div><!-- /view-design -->
 
@@ -593,7 +644,8 @@ const ICONS = {
   cookerHood: '<path d="M4 9l3-5h10l3 5"/><rect x="3.5" y="9" width="17" height="3" rx="1"/><path d="M12 12v4"/><rect x="9" y="16" width="6" height="4" rx="1"/>',
   oven: '<rect x="3" y="4" width="18" height="17" rx="1.5"/><rect x="5.5" y="6" width="13" height="2" rx="0.5"/><rect x="5.5" y="11" width="13" height="7" rx="1"/><circle cx="12" cy="14.5" r="2.2"/>',
   plug: '<path d="M9 2v6M15 2v6"/><path d="M6 8h12v4a6 6 0 0 1-12 0V8z"/><path d="M12 18v4"/>',
-  demolition: '<path d="M17.5 2L17.5 9.5"/><circle cx="17.5" cy="15" r="5.2"/><path d="M2 11L2 21 10 21 10 17.5 12.5 16 9.5 14.5 12 12.5 2 11 Z" stroke-width="1.8"/><path d="M10.5 13.5L12.5 14.7M10.7 17.8L12.8 17.2" stroke-width="1.2"/>',
+  demolition: '<rect x="2" y="9" width="9" height="8" rx="1" transform="rotate(-8 6.5 13)" stroke-width="1.6"/><rect x="13" y="9.5" width="9" height="8" rx="1" transform="rotate(7 17.5 13.5)" stroke-width="1.6"/><path d="M5 10.5L8.5 15.5" stroke-width="1.1"/><path d="M16 11L19.5 16" stroke-width="1.1"/><circle cx="7" cy="20.5" r="0.9" fill="currentColor" stroke="none"/><circle cx="11" cy="21.3" r="0.6" fill="currentColor" stroke="none"/>',
+  removeLine: '<circle cx="12" cy="12" r="9"/><path d="M8 12h8"/>',
   cleaning: '<path d="M21 3L13 11" stroke-width="2.2"/><path d="M9.82 7.82L16.18 14.18" stroke-width="2.2"/><path d="M9.82 7.82L4.87 12.77" stroke-width="1.6"/><path d="M11.09 9.09L6.14 14.04" stroke-width="1.6"/><path d="M12.36 10.36L7.41 15.31" stroke-width="1.6"/><path d="M13.64 11.64L8.69 16.59" stroke-width="1.6"/><path d="M14.91 12.91L9.96 17.86" stroke-width="1.6"/><path d="M16.18 14.18L11.23 19.13" stroke-width="1.6"/>',
   pipe: '<rect x="3" y="10" width="18" height="4" rx="2"/><circle cx="6" cy="12" r="1.6"/><circle cx="18" cy="12" r="1.6"/>',
   garden: '<path d="M12 21V10"/><path d="M12 10c-4-1-6-4-6-7 3 0 6 2 7 5"/><path d="M12 13c4-1 6-4 6-7-3 0-6 2-7 5"/><rect x="7" y="19" width="10" height="3" rx="1"/>',
@@ -610,7 +662,10 @@ const CONTENT_ICON_NAMES = Object.keys(ICONS).filter(n => !CHROME_ICONS.includes
 function svgIcon(name, size, color, strokeW){
   strokeW = strokeW || 2;
   const body = ICONS[name] || ICONS.star;
-  return '<svg viewBox="0 0 24 24" width="'+size+'" height="'+size+'" fill="none" stroke="'+color+'" stroke-width="'+strokeW+'" stroke-linecap="round" stroke-linejoin="round">'+body+'</svg>';
+  // color= on the <svg> itself ensures any fill="currentColor" sub-paths (e.g. the
+  // saw blade in the hammer icon) always resolve to the intended color, regardless
+  // of whether a CSS rule elsewhere happens to set `color` on an ancestor.
+  return '<svg viewBox="0 0 24 24" width="'+size+'" height="'+size+'" fill="none" stroke="'+color+'" color="'+color+'" stroke-width="'+strokeW+'" stroke-linecap="round" stroke-linejoin="round">'+body+'</svg>';
 }
 function escapeHtml(s){
   return String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -657,7 +712,7 @@ function seedScreens(){
     els.push({id:uid(), type:'header', x:20, y:58, w:250, h:40, zIndex:z++, opacity:100, title:'My Jobs', showBack:false, fill:'transparent'});
     els.push({id:uid(), type:'icon', x:288, y:64, w:26, h:26, zIndex:z++, opacity:100, icon:'bell', color:'#4B5563', badge:true});
     els.push({id:uid(), type:'avatar', x:344, y:56, w:44, h:44, zIndex:z++, opacity:100, initials:'SJ', fill:'#E8F5E1', textColor:'#2F6B2A'});
-    els.push({id:uid(), type:'inputField', x:20, y:104, w:372, h:44, zIndex:z++, opacity:100, placeholder:'Search jobs or address…', fill:'#FFFFFF', borderColor:'#E5E7EB'});
+    els.push({id:uid(), type:'inputField', x:20, y:104, w:372, h:44, zIndex:z++, opacity:100, placeholder:'Search jobs or address…', fill:'#FFFFFF', borderColor:'#E5E7EB', isSearch:true});
 
     const jobs = [
       {y:160, pFill:'#FDE2E1', pText:'#C0392B', priority:'High',   addr:'12 Fernleigh Ave, Karori',  meta:'Job #A1042 · Due 28 Aug'},
@@ -755,7 +810,7 @@ function seedScreens(){
     els.push({id:uid(), type:'navbar', x:0, y:860, w:412, h:64, zIndex:z++, opacity:100, fill:'#FFFFFF', activeIndex:-1, items:[
       {icon:'chevronLeft', label:'Back to List', shape:'square', isCenter:false},
       {icon:'plus', label:'New Line', shape:'square', isCenter:false},
-      {icon:'demolition', label:'Remove Line', shape:'square', isCenter:false},
+      {icon:'removeLine', label:'Remove Line', shape:'square', isCenter:false},
       {icon:'camera', label:'Add Photo', shape:'square', isCenter:false}
     ]});
 
@@ -883,10 +938,10 @@ function defaultsFor(type){
     case 'card': return {w:340,h:140,fill:'#FFFFFF',radius:18,shadow:true};
     case 'text': return {w:160,h:26,text:'Text',fontSize:16,fontWeight:'400',color:'#1F2937',textAlign:'left'};
     case 'icon': return {w:28,h:28,icon:'home',color:'#3E8E41'};
-    case 'image': return {w:160,h:100,label:'Image'};
+    case 'image': return {w:160,h:100,label:'Image',src:null};
     case 'button': return {w:160,h:48,text:'Button',fill:'#5EB84D',textColor:'#FFFFFF',radius:14,fontSize:15};
     case 'pill': return {w:96,h:28,text:'In Progress',fill:'#E8F5E1',textColor:'#2F6B2A'};
-    case 'inputField': return {w:340,h:48,placeholder:'Search…',fill:'#FFFFFF',borderColor:'#E5E7EB'};
+    case 'inputField': return {w:340,h:48,placeholder:'Search…',fill:'#FFFFFF',borderColor:'#E5E7EB',isSearch:false};
     case 'avatar': return {w:48,h:48,initials:'SJ',fill:'#E8F5E1',textColor:'#2F6B2A'};
     case 'header': return {w:372,h:40,title:'Screen Title',showBack:true,fill:'transparent'};
     case 'statCard': return {w:170,h:88,value:'12',label:'Label',fill:'#FFFFFF',valueColor:'#1F2937'};
@@ -1048,6 +1103,16 @@ function renderCanvas(){
     node.innerHTML += '<div class="resize-handle"></div>';
     node.addEventListener('mousedown', onElementMouseDown);
     node.addEventListener('dblclick', onElementDblClick);
+    if(el.type === 'image'){
+      node.addEventListener('dragover', (e) => { e.preventDefault(); e.stopPropagation(); node.style.outline = '2px dashed var(--green-500)'; });
+      node.addEventListener('dragleave', () => { node.style.outline = ''; });
+      node.addEventListener('drop', (e) => {
+        e.preventDefault(); e.stopPropagation();
+        node.style.outline = '';
+        const file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+        if(file) loadImageFileIntoElement(file, el);
+      });
+    }
     canvas.appendChild(node);
   });
   if(typeof renderAnnotations === 'function') renderAnnotations();
@@ -1073,7 +1138,15 @@ function applyTypeStyle(node, el){
       node.style.border = '1px solid rgba(0,0,0,0.04)';
       break;
     case 'image':
-      inner = '<div class="ph-image">'+svgIcon('imagePh',26,'#9CA3AF')+'<span>'+escapeHtml(el.label||'Image')+'</span></div>';
+      node.style.background = 'transparent';
+      if(el.src){
+        node.style.borderRadius = '10px';
+        node.style.overflow = 'hidden';
+        inner = '<img src="'+el.src+'" style="width:100%;height:100%;object-fit:cover;border-radius:10px;pointer-events:none;" draggable="false">';
+      } else {
+        node.style.overflow = 'visible';
+        inner = '<div class="ph-image">'+svgIcon('imagePh',26,'#9CA3AF')+'<span>'+escapeHtml(el.label||'Image')+'</span><span style="font-size:9px;font-weight:600;color:#B7C2B2;">Drop image, or double-click</span></div>';
+      }
       break;
     case 'text':
       node.style.background = 'transparent';
@@ -1095,7 +1168,7 @@ function applyTypeStyle(node, el){
     case 'inputField':
       node.style.background = el.fill; node.style.borderRadius = '13px';
       node.style.border = '1.4px solid ' + el.borderColor; node.style.justifyContent = 'flex-start';
-      inner = '<div class="el-input-label" style="padding-left:14px;color:#9CA3AF;font-size:13px;">'+svgIcon('search',13,'#9CA3AF')+' &nbsp;'+escapeHtml(el.placeholder)+'</div>';
+      inner = '<div class="el-input-label" style="padding-left:14px;color:#9CA3AF;font-size:13px;">'+(el.isSearch ? svgIcon('search',13,'#9CA3AF')+' &nbsp;' : '')+escapeHtml(el.placeholder)+'</div>';
       break;
     case 'avatar':
       node.style.background = el.fill; node.style.borderRadius = '50%';
@@ -1292,7 +1365,13 @@ function onElementDblClick(e){
   const node = e.currentTarget;
   const id = node.dataset.id;
   const el = currentScreen().elements.find(x=>x.id===id);
-  if(!el || el.type !== 'text') return;
+  if(!el) return;
+  if(el.type === 'image'){
+    triggerImagePicker(el);
+    e.stopPropagation();
+    return;
+  }
+  if(el.type !== 'text') return;
   const label = node.querySelector('.el-text');
   if(!label) return;
   pushHistory();
@@ -1569,13 +1648,14 @@ function renderAnnotations(){
     bubble.style.top = bubbleY + 'px';
     bubble.dataset.id = ann.id;
     bubble.innerHTML =
-      '<div class="ann-text" contenteditable="false">'+escapeHtml(ann.text)+'</div>' +
+      '<div class="ann-drag-handle" title="Drag to move this comment">⠿</div>' +
+      '<div class="ann-text" contenteditable="true">'+escapeHtml(ann.text)+'</div>' +
       '<div class="ann-controls">' +
         '<button type="button" class="ann-btn ann-flip" title="Move to other side">⇄</button>' +
         '<button type="button" class="ann-btn ann-del" title="Delete comment">✕</button>' +
       '</div>';
     bubble.addEventListener('mousedown', (e) => {
-      if(e.target.closest('.ann-btn') || e.target.classList.contains('ann-text')) return;
+      if(!e.target.closest('.ann-drag-handle')) return;
       startAnnotationDrag(e, ann.id, 'bubble');
     });
     bubble.querySelector('.ann-flip').addEventListener('click', () => {
@@ -1586,16 +1666,14 @@ function renderAnnotations(){
     });
     bubble.querySelector('.ann-del').addEventListener('click', () => deleteAnnotation(ann.id));
     const textEl = bubble.querySelector('.ann-text');
-    textEl.addEventListener('dblclick', (e) => {
-      pushHistory();
-      textEl.contentEditable = 'true';
-      textEl.focus();
-      document.execCommand && document.execCommand('selectAll', false, null);
-      e.stopPropagation();
+    let textDirty = false;
+    textEl.addEventListener('mousedown', (e) => e.stopPropagation());
+    textEl.addEventListener('input', () => {
+      if(!textDirty){ pushHistory(); textDirty = true; }
     });
     textEl.addEventListener('blur', () => {
+      textDirty = false;
       ann.text = textEl.innerText || 'Describe this…';
-      textEl.contentEditable = 'false';
       scheduleAutosave();
     });
     layer.appendChild(bubble);
@@ -1697,18 +1775,33 @@ function pastelize(hex){
 }
 function field(labelText, inputHtml){ return '<div class="prop-field"><label>'+labelText+'</label>'+inputHtml+'</div>'; }
 function colorField(id, value){
-  const allColors = PALETTE_COLORS.concat(CUSTOM_PALETTE_COLORS);
-  const sw = '<div class="swatches">' + allColors.map(c => '<div class="swatch" data-color-target="'+id+'" style="background:'+c+'" title="'+c+'"></div>').join('') +
+  const sw = '<div class="swatches">' +
+    PALETTE_COLORS.map(c => '<div class="swatch" data-color-target="'+id+'" style="background:'+c+'" title="'+c+'"></div>').join('') +
+    CUSTOM_PALETTE_COLORS.map(c => '<span class="swatch-wrap"><div class="swatch" data-color-target="'+id+'" style="background:'+c+'" title="'+c+'"></div><button type="button" class="swatch-remove" data-remove-color="'+c+'" title="Remove this color">×</button></span>').join('') +
     '<div class="swatch swatch-add" data-color-target="'+id+'" title="Pick a custom color — added as a pastel tone">+</div></div>';
   return '<input type="color" id="'+id+'" value="'+toHex(value)+'">' + sw;
 }
 let colorAddCallback = null;
-function openColorAdder(currentColor, onPick){
+function openColorAdder(anchorEl, currentColor, onPick){
   const input = document.getElementById('global-color-add-input');
   input.value = toHex(currentColor) || '#5EB84D';
   colorAddCallback = onPick;
+  if(anchorEl && anchorEl.getBoundingClientRect){
+    const r = anchorEl.getBoundingClientRect();
+    input.style.top = Math.max(0, r.top) + 'px';
+    input.style.left = Math.max(0, r.left) + 'px';
+  }
   input.click();
 }
+document.getElementById('properties').addEventListener('click', (e) => {
+  const btn = e.target.closest('.swatch-remove');
+  if(!btn) return;
+  e.stopPropagation();
+  const c = btn.dataset.removeColor;
+  CUSTOM_PALETTE_COLORS = CUSTOM_PALETTE_COLORS.filter(x => x !== c);
+  try{ if(window.storage && window.storage.set) window.storage.set('custom-palette-colors', JSON.stringify(CUSTOM_PALETTE_COLORS), false); }catch(err){}
+  renderProperties();
+});
 document.getElementById('global-color-add-input').addEventListener('input', (e) => {
   if(!colorAddCallback) return;
   const pastel = pastelize(e.target.value);
@@ -1725,6 +1818,31 @@ function toHex(v){
   if(/^#/.test(v)) return v;
   return '#ffffff';
 }
+
+/* ============================= IMAGE PLACEHOLDER UPLOADS ============================= */
+let imagePickerTargetEl = null;
+function triggerImagePicker(el){
+  imagePickerTargetEl = el;
+  document.getElementById('global-image-file-input').click();
+}
+function loadImageFileIntoElement(file, el){
+  if(!file || !file.type || !file.type.startsWith('image/')) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    pushHistory();
+    el.src = reader.result;
+    liveStyleUpdate(el);
+    if(state.selectedIds.length===1 && state.selectedIds[0]===el.id) renderProperties();
+    scheduleAutosave();
+  };
+  reader.readAsDataURL(file);
+}
+document.getElementById('global-image-file-input').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if(file && imagePickerTargetEl) loadImageFileIntoElement(file, imagePickerTargetEl);
+  e.target.value = '';
+  imagePickerTargetEl = null;
+});
 
 function renderProperties(){
   const root = document.getElementById('properties');
@@ -1948,7 +2066,11 @@ function typeFieldsHtml(el){
         field('Align', '<select id="prop-textAlign"><option value="left"'+(el.textAlign=='left'?' selected':'')+'>Left</option><option value="center"'+(el.textAlign=='center'?' selected':'')+'>Center</option><option value="right"'+(el.textAlign=='right'?' selected':'')+'>Right</option></select>') +
         field('Color', colorField('prop-color', el.color));
     case 'icon': return field('Icon', iconTriggerHtml('prop-icon-trigger', el.icon)) + field('Color', colorField('prop-color', el.color)) + field('Notification dot', '<input type="checkbox" id="prop-badge" '+(el.badge?'checked':'')+'>');
-    case 'image': return field('Label', '<input type="text" id="prop-label" value="'+escapeHtml(el.label)+'">');
+    case 'image': return field('Label', '<input type="text" id="prop-label" value="'+escapeHtml(el.label)+'">') +
+      '<div class="prop-field"><label>Image</label><div style="display:flex;gap:6px;">' +
+        '<button type="button" class="btn small" id="prop-image-choose" style="flex:1;">'+(el.src ? 'Change Image…' : 'Choose Image…')+'</button>' +
+        (el.src ? '<button type="button" class="btn small danger" id="prop-image-remove">Remove</button>' : '') +
+      '</div><div style="font-size:10.5px;color:var(--gray-400);margin-top:4px;">Or drag &amp; drop an image file straight onto the placeholder on the canvas. Images are for on-screen preview only — they aren\'t saved by autosave/export, so re-add after reloading if needed.</div></div>';
     case 'button':
       return field('Label', '<input type="text" id="prop-text" value="'+escapeHtml(el.text)+'">') +
         field('Fill', colorField('prop-fill', el.fill)) + field('Text color', colorField('prop-textColor', el.textColor)) +
@@ -1958,6 +2080,7 @@ function typeFieldsHtml(el){
         field('Fill', colorField('prop-fill', el.fill)) + field('Text color', colorField('prop-textColor', el.textColor));
     case 'inputField':
       return field('Placeholder', '<input type="text" id="prop-placeholder" value="'+escapeHtml(el.placeholder)+'">') +
+        field('Search field (shows magnifying glass icon)', '<input type="checkbox" id="prop-isSearch" '+(el.isSearch?'checked':'')+'>') +
         field('Fill', colorField('prop-fill', el.fill)) + field('Border', colorField('prop-borderColor', el.borderColor));
     case 'avatar':
       return field('Initials', '<input type="text" id="prop-initials" value="'+escapeHtml(el.initials)+'" maxlength="3">') +
@@ -2014,7 +2137,7 @@ function bindScreenPropEvents(){
   });
   const bgAddSw = document.querySelector('.swatch-add[data-color-target="prop-screen-bg"]');
   if(bgAddSw) bgAddSw.addEventListener('click', () => {
-    openColorAdder(currentScreen().background, (pastel) => {
+    openColorAdder(bgAddSw, currentScreen().background, (pastel) => {
       pushHistory(); currentScreen().background = pastel; renderCanvas(); renderProperties(); scheduleAutosave();
     });
   });
@@ -2046,7 +2169,7 @@ function bindElementPropEvents(el){
     });
     const addSw = root.querySelector('.swatch-add[data-color-target="'+id+'"]');
     if(addSw) addSw.addEventListener('click', () => {
-      openColorAdder(el[prop], (pastel) => {
+      openColorAdder(addSw, el[prop], (pastel) => {
         pushHistory(); el[prop]=pastel; i.value=pastel; liveStyleUpdate(el); renderProperties(); scheduleAutosave();
       });
     });
@@ -2065,7 +2188,7 @@ function bindElementPropEvents(el){
   bindText('prop-text','text'); bindText('prop-label','label'); bindText('prop-placeholder','placeholder');
   bindText('prop-initials','initials'); bindText('prop-title','title'); bindText('prop-value','value');
   bindText('prop-icons','icons'); bindText('prop-labels','labels');
-  bindCheck('prop-shadow','shadow'); bindCheck('prop-showBack','showBack'); bindCheck('prop-badge','badge');
+  bindCheck('prop-shadow','shadow'); bindCheck('prop-showBack','showBack'); bindCheck('prop-badge','badge'); bindCheck('prop-isSearch','isSearch');
   bindSelect('prop-fontWeight','fontWeight'); bindSelect('prop-textAlign','textAlign');
 
   const iconTrig = document.getElementById('prop-icon-trigger');
@@ -2078,6 +2201,17 @@ function bindElementPropEvents(el){
       liveStyleUpdate(el);
       scheduleAutosave();
     });
+  });
+
+  const imgChooseBtn = document.getElementById('prop-image-choose');
+  if(imgChooseBtn) imgChooseBtn.addEventListener('click', () => triggerImagePicker(el));
+  const imgRemoveBtn = document.getElementById('prop-image-remove');
+  if(imgRemoveBtn) imgRemoveBtn.addEventListener('click', () => {
+    pushHistory();
+    el.src = null;
+    liveStyleUpdate(el);
+    renderProperties();
+    scheduleAutosave();
   });
 
   document.querySelectorAll('.align-btn').forEach(b => b.addEventListener('click', () => alignSelection(b.dataset.align)));
@@ -2375,7 +2509,7 @@ function buildExportData(){
       hierarchyDepth: depthById[s.id] || 0,
       parentScreenName: s.parentId ? (nameById[s.parentId]||null) : null,
       background: s.background,
-      elements: s.elements.slice().sort((a,b)=>a.zIndex-b.zIndex).map(e => { const copy = Object.assign({}, e); delete copy.id; return copy; }),
+      elements: s.elements.slice().sort((a,b)=>a.zIndex-b.zIndex).map(e => { const copy = Object.assign({}, e); delete copy.id; if(copy.type==='image') delete copy.src; return copy; }),
       annotations: (s.annotations||[]).map(a => { const copy = Object.assign({}, a); delete copy.id; delete copy.targetElementId; return copy; })
     }))
   };
@@ -2867,14 +3001,20 @@ renderConsoleSampleViews();
 /* ============================= INTEGRATION (MuleSoft) ============================= */
 const integrationState = {
   mule: { baseUrl:'', healthPath:'/api/health', clientId:'', clientSecret:'', environment:'Sandbox' },
+  ideagen: { baseUrl:'', apiKey:'' },
+  talentlms: { baseUrl:'', apiKey:'' },
   endpoints: [
     {screen:'Jobs List', endpoint:'GET /api/jobs', notes:'Filtered to logged-in trade user; Mule resolves the FileMaker Jobs layout'},
     {screen:'Job Detail', endpoint:'GET /api/jobs/{jobId}', notes:'Single job incl. related job lines'},
     {screen:'Job Lines', endpoint:'GET /api/jobs/{jobId}/lines', notes:'SOR code, qty, status per line'},
     {screen:'SOR Codes', endpoint:'GET /api/sor-codes', notes:'Mule strips Management Price — trades get Subcontractor Price only'},
     {screen:'Trade Users', endpoint:'GET /api/users', notes:'Shared FileMaker accounts (Region 07 & 10) resolved to individual Trade IDs'},
-    {screen:'Activity Feed', endpoint:'GET /api/activity', notes:'Aggregated from FileMaker + MRI, normalised by Mule'},
-    {screen:'Audit Logs', endpoint:'GET /api/audit-logs', notes:'Rolling 15-day window; MRI is source of truth'}
+    {screen:'Activity Feed', endpoint:'GET /api/activity', notes:'Sourced from FileMaker by default (activity.source config); MRI is a ready alternate'},
+    {screen:'Audit Logs', endpoint:'GET /api/audit-logs', notes:'Rolling 15-day window'},
+    {screen:'Attend Work Order', endpoint:'POST /api/jobs/{jobId}/attend', notes:'Writes into FileMaker; FileMaker\'s existing sync pushes it on to Kāinga Ora'},
+    {screen:'General Note', endpoint:'POST /api/jobs/{jobId}/notes', notes:'Free-text update on a job line'},
+    {screen:'Extension of Time', endpoint:'POST /api/jobs/{jobId}/extension-of-time', notes:'Trade-submitted request'},
+    {screen:'Payment Request', endpoint:'POST /api/jobs/{jobId}/payment-requests', notes:'Trade-submitted request'}
   ]
 };
 let integrationSaveTimer = null;
@@ -2912,6 +3052,30 @@ function renderIntegrationView(){
     bindIntegrationField('mule-health','mule','healthPath');
     bindIntegrationField('mule-cid','mule','clientId');
     bindIntegrationField('mule-secret','mule','clientSecret');
+  }
+  const ideagenRoot = document.getElementById('integration-ideagen-fields');
+  if(ideagenRoot){
+    const g = integrationState.ideagen;
+    ideagenRoot.innerHTML =
+      '<div class="prop-label" style="margin-bottom:8px;">Ideagen Workforce (Safety)</div>' +
+      '<div class="prop-row">' +
+        field('Base URL', '<input type="text" id="ideagen-base" placeholder="https://api.ideagenworkforce.com" value="'+escapeHtml(g.baseUrl)+'">') +
+        field('API Key', '<input type="password" id="ideagen-key" placeholder="••••••••" value="'+escapeHtml(g.apiKey)+'">') +
+      '</div>';
+    bindIntegrationField('ideagen-base','ideagen','baseUrl');
+    bindIntegrationField('ideagen-key','ideagen','apiKey');
+  }
+  const talentRoot = document.getElementById('integration-talentlms-fields');
+  if(talentRoot){
+    const g = integrationState.talentlms;
+    talentRoot.innerHTML =
+      '<div class="prop-label" style="margin-bottom:8px;">TalentLMS</div>' +
+      '<div class="prop-row">' +
+        field('Base URL (subdomain)', '<input type="text" id="talentlms-base" placeholder="https://switchedon.talentlms.com/api/v1" value="'+escapeHtml(g.baseUrl)+'">') +
+        field('API Key', '<input type="password" id="talentlms-key" placeholder="••••••••" value="'+escapeHtml(g.apiKey)+'">') +
+      '</div>';
+    bindIntegrationField('talentlms-base','talentlms','baseUrl');
+    bindIntegrationField('talentlms-key','talentlms','apiKey');
   }
   renderEndpointTable();
 }
@@ -2972,20 +3136,48 @@ async function testMuleConnection(){
   }
 }
 document.getElementById('mule-test-btn') && document.getElementById('mule-test-btn').addEventListener('click', testMuleConnection);
+
+async function testGenericApiKeyConnection(group, statusId, label){
+  const g = integrationState[group];
+  if(!g.baseUrl){ setIntegrationStatus(statusId, 'Enter a Base URL first.', 'err'); return; }
+  setIntegrationStatus(statusId, 'Connecting…', '');
+  try{
+    const res = await fetch(g.baseUrl.replace(/\/$/, ''), {
+      headers: g.apiKey ? {'Authorization': 'Bearer ' + g.apiKey} : {}
+    });
+    if(res.ok){
+      setIntegrationStatus(statusId, '✓ '+label+' responded ('+res.status+').', 'ok');
+    } else if(res.status === 401 || res.status === 403){
+      setIntegrationStatus(statusId, 'Reached '+label+', but the API Key was rejected ('+res.status+').', 'err');
+    } else {
+      setIntegrationStatus(statusId, 'Reached '+label+', but got HTTP '+res.status+'.', 'err');
+    }
+  }catch(err){
+    setIntegrationStatus(statusId, 'Could not reach '+label+' — check the URL, or this is expected if it isn\'t connected yet. ('+err.message+')', 'err');
+  }
+}
+document.getElementById('ideagen-test-btn') && document.getElementById('ideagen-test-btn').addEventListener('click', () => testGenericApiKeyConnection('ideagen','ideagen-status','Ideagen Workforce'));
+document.getElementById('talentlms-test-btn') && document.getElementById('talentlms-test-btn').addEventListener('click', () => testGenericApiKeyConnection('talentlms','talentlms-status','TalentLMS'));
+
 document.getElementById('btn-export-integration') && document.getElementById('btn-export-integration').addEventListener('click', () => {
   const payload = {
     notes: 'Integration handoff spec for the native Android build. The app talks ONLY to the MuleSoft application below — never directly to FileMaker or MRI. Client secrets are intentionally excluded from this export; provision them via Anypoint-issued per-environment credentials and Android secure storage.',
-    architecture: 'Android App -> MuleSoft (Anypoint Platform, "Switched On" environment) -> FileMaker Data API + MRI API',
+    architecture: 'Android App -> MuleSoft (Anypoint Platform, "Switched On" environment) -> FileMaker Data API (+ MRI, available but not currently wired to anything real)',
     muleApplication: {
       environment: integrationState.mule.environment,
       baseUrl: integrationState.mule.baseUrl,
       healthPath: integrationState.mule.healthPath
     },
     screenToEndpointMapping: integrationState.endpoints,
+    futureIntegrations: {
+      notes: 'Not connected yet — placeholders kept ready so whoever wires these up later has a starting point.',
+      ideagenWorkforceSafety: { baseUrl: integrationState.ideagen.baseUrl },
+      talentLms: { baseUrl: integrationState.talentlms.baseUrl }
+    },
     dataHandlingRules: [
       'Trades see the Subcontractor Price only — Mule must strip the Management Price (internal) before the response leaves the app; it must never reach the Android client.',
       'Trade user accounts are shared FileMaker logins (Region 07 & 10) resolved by Mule to individual Kāinga Ora Trade IDs.',
-      'Audit log retention is a rolling 15-day window, sourced from MRI.'
+      'Audit log retention is a rolling 15-day window.'
     ]
   };
   writeToFolderOrDownload('integration-spec.json', JSON.stringify(payload, null, 2), 'application/json');
@@ -2998,12 +3190,202 @@ document.getElementById('btn-export-integration') && document.getElementById('bt
       if(res && res.value){
         const saved = JSON.parse(res.value);
         if(saved.mule) Object.assign(integrationState.mule, saved.mule);
+        if(saved.ideagen) Object.assign(integrationState.ideagen, saved.ideagen);
+        if(saved.talentlms) Object.assign(integrationState.talentlms, saved.talentlms);
         if(saved.endpoints && Array.isArray(saved.endpoints) && saved.endpoints.length) integrationState.endpoints = saved.endpoints;
         renderIntegrationView();
+        if(typeof renderTestingView === 'function') renderTestingView();
       }
     }
   }catch(e){ /* nothing saved yet */ }
 })();
+
+/* ============================= PROJECT STATUS ============================= */
+const PROJECT_STATUS_PHASES = [
+  { phase: 'Build', steps: [
+    'MuleSoft app scaffolded (this project) — flows, DataWeave transforms, OpenAPI spec',
+    'FileMaker fields mapped to real names in every DataWeave transform (WorkOrderID, LineNo, etc.)',
+    'FileMaker API layouts created (Jobs_API, JobLines_API, SORCodes_API, TradeUsers_API, ActivityLog_API, AuditLog_API)',
+    'UI Design Studio screens reviewed and signed off by stakeholders',
+    'SOR code icon mapping finalised and exported'
+  ]},
+  { phase: 'Test (Sandbox)', steps: [
+    'MuleSoft app deployed to CloudHub Sandbox',
+    'Sandbox API registered in API Manager with Client ID Enforcement',
+    '"Test Connection" succeeds on the Integration tab against Sandbox',
+    'Every row on the Testing tab passes against Sandbox',
+    'Security check: confirm Management Price never appears in any /sor-codes response',
+    'Android app wired to Sandbox Mule endpoints and tested end-to-end by a trade user'
+  ]},
+  { phase: 'Go Live (Production)', steps: [
+    'MuleSoft app deployed to CloudHub Production',
+    'Production API Manager contract issued — Client ID/Secret handed to the Android release build',
+    'Production secrets (FileMaker password, MRI secret if used) encrypted and set in Runtime Manager',
+    'CloudHub alerts / Anypoint Monitoring configured for the production app',
+    'Android app published (Play Store internal track or direct install)'
+  ]},
+  { phase: 'Post-launch', steps: [
+    'Ideagen Workforce (Safety) integration connected',
+    'TalentLMS integration connected',
+    'First production incident/runbook review scheduled'
+  ]}
+];
+function projectStatusStepId(phaseIdx, stepIdx){ return 'ps-'+phaseIdx+'-'+stepIdx; }
+const projectStatusState = { done: {} };
+let projectStatusSaveTimer = null;
+function scheduleProjectStatusSave(){
+  if(projectStatusSaveTimer) clearTimeout(projectStatusSaveTimer);
+  projectStatusSaveTimer = setTimeout(async () => {
+    try{ if(window.storage && window.storage.set) await window.storage.set('project-status', JSON.stringify(projectStatusState), false); }catch(e){}
+  }, 400);
+}
+function renderProjectStatus(){
+  let total = 0, done = 0;
+  PROJECT_STATUS_PHASES.forEach((p,pi) => p.steps.forEach((s,si) => { total++; if(projectStatusState.done[projectStatusStepId(pi,si)]) done++; }));
+  const pct = total ? Math.round((done/total)*100) : 0;
+  const progressRoot = document.getElementById('project-status-progress');
+  if(progressRoot){
+    progressRoot.innerHTML =
+      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">' +
+        '<div style="font-size:13px;font-weight:800;color:var(--gray-900);">'+done+' of '+total+' steps complete</div>' +
+        '<div style="font-size:18px;font-weight:800;color:var(--green-700);">'+pct+'%</div>' +
+      '</div>' +
+      '<div style="height:10px;background:var(--gray-100);border-radius:999px;overflow:hidden;">' +
+        '<div style="height:100%;width:'+pct+'%;background:linear-gradient(90deg,var(--green-400),var(--green-600));border-radius:999px;"></div>' +
+      '</div>';
+  }
+  const root = document.getElementById('project-status-phases');
+  if(!root) return;
+  root.innerHTML = PROJECT_STATUS_PHASES.map((p, pi) => {
+    const phaseDone = p.steps.filter((s,si) => projectStatusState.done[projectStatusStepId(pi,si)]).length;
+    return '<div class="console-card">' +
+      '<h3>'+escapeHtml(p.phase)+' <span style="font-weight:600;font-size:11px;color:var(--gray-400);">— '+phaseDone+'/'+p.steps.length+'</span></h3>' +
+      p.steps.map((s, si) => {
+        const id = projectStatusStepId(pi, si);
+        const checked = !!projectStatusState.done[id];
+        return '<label style="display:flex;align-items:flex-start;gap:9px;padding:7px 2px;cursor:pointer;'+(checked?'opacity:0.6;':'')+'">' +
+          '<input type="checkbox" class="ps-check" data-id="'+id+'" '+(checked?'checked':'')+' style="margin-top:2px;width:15px;height:15px;flex:none;">' +
+          '<span style="font-size:12.5px;color:var(--gray-900);'+(checked?'text-decoration:line-through;':'')+'">'+escapeHtml(s)+'</span>' +
+        '</label>';
+      }).join('') +
+    '</div>';
+  }).join('');
+  root.querySelectorAll('.ps-check').forEach(cb => cb.addEventListener('change', (e) => {
+    projectStatusState.done[e.target.dataset.id] = e.target.checked;
+    renderProjectStatus();
+    scheduleProjectStatusSave();
+  }));
+}
+(async function restoreProjectStatus(){
+  try{
+    if(window.storage && window.storage.get){
+      const res = await window.storage.get('project-status', false);
+      if(res && res.value){
+        const saved = JSON.parse(res.value);
+        if(saved.done) projectStatusState.done = saved.done;
+      }
+    }
+  }catch(e){ /* nothing saved yet */ }
+  renderProjectStatus();
+})();
+
+/* ============================= TESTING ============================= */
+function parseEndpoint(str){
+  const parts = String(str||'').trim().split(/\s+/);
+  if(parts.length >= 2) return { method: parts[0].toUpperCase(), path: parts.slice(1).join(' ') };
+  return { method: 'GET', path: parts[0] || '/' };
+}
+function fillPathPlaceholders(path){
+  return path.replace(/\{[^}]+\}/g, 'TEST123');
+}
+function testRowId(prefix, idx){ return prefix+'-test-'+idx; }
+async function runMuleEndpointTest(idx){
+  const row = integrationState.endpoints[idx];
+  const statusEl = document.getElementById(testRowId('mule', idx));
+  if(!statusEl) return;
+  const m = integrationState.mule;
+  if(!m.baseUrl){ statusEl.innerHTML = '<span class="badge pending">Set Base URL first</span>'; return; }
+  statusEl.innerHTML = '<span class="badge region">Running…</span>';
+  const { method, path } = parseEndpoint(row.endpoint);
+  const url = m.baseUrl.replace(/\/$/, '') + fillPathPlaceholders(path);
+  const headers = {};
+  if(m.clientId) headers['client_id'] = m.clientId;
+  if(m.clientSecret) headers['client_secret'] = m.clientSecret;
+  const opts = { method, headers };
+  if(method !== 'GET' && method !== 'HEAD'){
+    headers['Content-Type'] = 'application/json';
+    opts.body = JSON.stringify({ test: true, source: 'UI Design Studio Testing tab', timestamp: new Date().toISOString() });
+  }
+  const started = performance.now();
+  try{
+    const res = await fetch(url, opts);
+    const ms = Math.round(performance.now() - started);
+    const badgeClass = res.ok ? 'active' : 'pending';
+    statusEl.innerHTML = '<span class="badge '+badgeClass+'">HTTP '+res.status+' · '+ms+'ms</span>';
+  }catch(err){
+    statusEl.innerHTML = '<span class="badge pending" title="'+escapeHtml(err.message)+'">Unreachable</span>';
+  }
+}
+async function runGenericPlatformTest(group, idx, label){
+  const statusEl = document.getElementById(testRowId(group, idx));
+  if(!statusEl) return;
+  const g = integrationState[group];
+  if(!g.baseUrl){ statusEl.innerHTML = '<span class="badge pending">Set Base URL first</span>'; return; }
+  statusEl.innerHTML = '<span class="badge region">Running…</span>';
+  const started = performance.now();
+  try{
+    const res = await fetch(g.baseUrl.replace(/\/$/, ''), { headers: g.apiKey ? {'Authorization':'Bearer '+g.apiKey} : {} });
+    const ms = Math.round(performance.now() - started);
+    statusEl.innerHTML = '<span class="badge '+(res.ok?'active':'pending')+'">HTTP '+res.status+' · '+ms+'ms</span>';
+  }catch(err){
+    statusEl.innerHTML = '<span class="badge pending" title="'+escapeHtml(err.message)+'">Unreachable</span>';
+  }
+}
+function renderTestingView(){
+  const muleWrap = document.getElementById('testing-mule-table');
+  if(muleWrap){
+    let html = '<table class="console-table"><tr><th>Screen</th><th>Endpoint</th><th>Result</th><th></th></tr>';
+    integrationState.endpoints.forEach((row, i) => {
+      html += '<tr>' +
+        '<td>'+escapeHtml(row.screen)+'</td>' +
+        '<td style="font-family:monospace;font-size:11.5px;">'+escapeHtml(row.endpoint)+'</td>' +
+        '<td id="'+testRowId('mule', i)+'"><span class="badge region">Not run</span></td>' +
+        '<td><button type="button" class="btn small mule-run-test" data-idx="'+i+'">Run</button></td>' +
+        '</tr>';
+    });
+    html += '</table>';
+    muleWrap.innerHTML = html;
+    muleWrap.querySelectorAll('.mule-run-test').forEach(btn => btn.addEventListener('click', () => runMuleEndpointTest(Number(btn.dataset.idx))));
+  }
+  const otherWrap = document.getElementById('testing-other-table');
+  if(otherWrap){
+    const rows = [
+      { group:'ideagen', label:'Ideagen Workforce (Safety)', endpoint:'GET / (base URL reachability)' },
+      { group:'talentlms', label:'TalentLMS', endpoint:'GET / (base URL reachability)' }
+    ];
+    let html = '<table class="console-table"><tr><th>Platform</th><th>Endpoint</th><th>Result</th><th></th></tr>';
+    rows.forEach((row, i) => {
+      html += '<tr>' +
+        '<td>'+escapeHtml(row.label)+'</td>' +
+        '<td style="font-family:monospace;font-size:11.5px;">'+escapeHtml(row.endpoint)+'</td>' +
+        '<td id="'+testRowId(row.group, i)+'"><span class="badge region">Not run</span></td>' +
+        '<td><button type="button" class="btn small other-run-test" data-group="'+row.group+'" data-idx="'+i+'" data-label="'+row.label+'">Run</button></td>' +
+        '</tr>';
+    });
+    html += '</table>';
+    otherWrap.innerHTML = html;
+    otherWrap.querySelectorAll('.other-run-test').forEach(btn => btn.addEventListener('click', () => runGenericPlatformTest(btn.dataset.group, Number(btn.dataset.idx), btn.dataset.label)));
+  }
+}
+document.getElementById('testing-run-all') && document.getElementById('testing-run-all').addEventListener('click', async () => {
+  const summary = document.getElementById('testing-summary');
+  summary.textContent = 'Running all tests…';
+  for(let i=0;i<integrationState.endpoints.length;i++){ await runMuleEndpointTest(i); }
+  await runGenericPlatformTest('ideagen', 0, 'Ideagen Workforce (Safety)');
+  await runGenericPlatformTest('talentlms', 1, 'TalentLMS');
+  summary.textContent = 'Finished — see results below. Re-run individual rows any time.';
+});
+renderTestingView();
 
 })();
 </script>

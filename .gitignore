@@ -1,0 +1,9 @@
+target/
+*.class
+.DS_Store
+.idea/
+*.iml
+
+# Never commit real secrets — only the .template files belong in git
+src/main/resources/secure-*.properties
+!src/main/resources/secure-*.properties.template
